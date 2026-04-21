@@ -1,5 +1,7 @@
 using Godot;
 using System;
+using MegaCrit.Sts2.Core.Runs;
+using MegaCrit.Sts2.Core.Entities.Players;
 
 namespace LoanSystem;
 
@@ -19,10 +21,10 @@ public partial class LoanState : Node
 
     public static (int Principal, int TotalOwed) GetTierValues(LoanTier tier) => tier switch
     {
-        LoanTier.Low  => (80,  110),
-        LoanTier.Mid  => (100, 140),
+        LoanTier.Low => (80, 110),
+        LoanTier.Mid => (100, 140),
         LoanTier.High => (120, 175),
-        _             => (100, 140),
+        _ => (100, 140),
     };
 
     public static LoanTier GetTierForAscension(int ascension)
@@ -32,7 +34,36 @@ public partial class LoanState : Node
         return LoanTier.High;
     }
 
+    private string _lastKnownRunId = "";
+
     public bool HasDebt => LoanTakenThisRun && LoanRemaining > 0;
+
+    // Called by patches to check if we're in a new run and reset if needed
+    public void CheckAndResetForNewRun()
+    {
+        var runManager = HarmonyLib.Traverse.Create(MegaCrit.Sts2.Core.Runs.RunManager.Instance).Field("runState").GetValue();
+        if (runManager == null)
+        {
+            if (LoanTakenThisRun)
+            {
+                GD.Print($"[{MainFile.ModId}] No active run, resetting loan state.");
+                ResetForNewRun();
+            }
+            return;
+        }
+
+        // Use the runState object's hash as a run identifier
+        string currentRunId = runManager.GetHashCode().ToString();
+        if (currentRunId != _lastKnownRunId)
+        {
+            _lastKnownRunId = currentRunId;
+            if (LoanTakenThisRun)
+            {
+                GD.Print($"[{MainFile.ModId}] New run detected, resetting loan state.");
+                ResetForNewRun();
+            }
+        }
+    }
 
     public override void _Ready()
     {
@@ -46,8 +77,10 @@ public partial class LoanState : Node
         GD.Print($"[{MainFile.ModId}] LoanState initialized.");
     }
 
-    public void TakeLoan(int ascension)
+    public void TakeLoan(int ascension, Player player)
     {
+        GD.Print($"[{MainFile.ModId}] TakeLoan called, ascension={ascension}");
+
         if (LoanTakenThisRun)
         {
             GD.PrintErr($"[{MainFile.ModId}] Loan already taken this run!");
@@ -62,13 +95,8 @@ public partial class LoanState : Node
         LoanRemaining = totalOwed;
         LoanTakenThisRun = true;
 
-        var player = GameAPI.GetPlayer();
-        if (player != null)
-        {
-            GameAPI.GainGold(player, principal, false);
-        }
-
-        GD.Print($"[{MainFile.ModId}] Loan taken: {principal} gold, owe {totalOwed} total.");
+        player.Gold += principal;
+        GD.Print($"[{MainFile.ModId}] Loan taken: {principal} gold granted, owe {totalOwed} total. New gold: {player.Gold}");
     }
 
     public int ProcessGoldGain(int originalAmount)

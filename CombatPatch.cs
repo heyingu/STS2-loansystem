@@ -4,7 +4,7 @@ using MegaCrit.Sts2.Core.Combat;
 
 namespace LoanSystem;
 
-[HarmonyPatch(typeof(CombatManager), "StartCombat")]
+[HarmonyPatch(typeof(CombatManager), "StartCombatInternal")]
 public static class CombatStartPatch
 {
     [HarmonyPostfix]

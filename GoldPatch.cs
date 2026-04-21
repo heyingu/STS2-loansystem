@@ -1,32 +1,28 @@
 using HarmonyLib;
 using Godot;
+using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Players;
-using MegaCrit.Sts2.Core.Runs;
 
 namespace LoanSystem;
 
-/// <summary>
-/// 金币获得拦截补丁：自动还款
-/// </summary>
-[HarmonyPatch(typeof(Player), "GainGold")]
+[HarmonyPatch(typeof(PlayerCmd), "GainGold")]
 public static class GoldGainPatch
 {
     [HarmonyPrefix]
-    public static bool Prefix(Player __instance, ref int amount, bool triggerRelics = true)
+    public static bool Prefix(ref decimal amount, Player player, bool wasStolenBack = true)
     {
         try
         {
             var loanState = LoanState.Instance;
-            if (loanState == null || !loanState.HasDebt)
-                return true; // 无债务，正常执行
+            if (loanState == null || !loanState.HasDebt || player == null)
+                return true;
 
-            // 拦截金币收益，执行自动还款
-            int originalAmount = amount;
-            amount = loanState.ProcessGoldGain(amount);
+            int originalAmount = (int)amount;
+            int newAmount = loanState.ProcessGoldGain(originalAmount);
+            amount = newAmount;
 
-            GD.Print($"[{MainFile.ModId}] Gold gain intercepted: {originalAmount} -> {amount}");
-
-            return true; // 继续执行原方法，但金额已被修改
+            GD.Print($"[{MainFile.ModId}] Gold gain intercepted: {originalAmount} -> {newAmount}");
+            return true;
         }
         catch (System.Exception ex)
         {
@@ -36,27 +32,6 @@ public static class GoldGainPatch
     }
 }
 
-/// <summary>
-/// 新局开始时重置借贷状态
-/// </summary>
-[HarmonyPatch(typeof(RunManager), "StartNewRun")]
-public static class NewRunPatch
-{
-    [HarmonyPostfix]
-    public static void Postfix()
-    {
-        try
-        {
-            var loanState = LoanState.Instance;
-            if (loanState != null)
-            {
-                loanState.ResetForNewRun();
-                GD.Print($"[{MainFile.ModId}] Loan state reset for new run.");
-            }
-        }
-        catch (System.Exception ex)
-        {
-            GD.PrintErr($"[{MainFile.ModId}] Error in NewRunPatch: {ex}");
-        }
-    }
-}
+// 暂时注释掉，等确认正确的方法名后再启用
+// [HarmonyPatch(typeof(RunManager), "StartNewRun")]
+// public static class NewRunPatch { ... }

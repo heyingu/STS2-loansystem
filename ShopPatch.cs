@@ -2,6 +2,10 @@ using HarmonyLib;
 using Godot;
 using MegaCrit.Sts2.Core.Nodes.Screens.Shops;
 using MegaCrit.Sts2.Core.Localization;
+using MegaCrit.Sts2.Core.Entities.Players;
+using MegaCrit.Sts2.Core.Nodes.Rooms;
+using System.Linq;
+using System.Collections.Generic;
 
 namespace LoanSystem;
 
@@ -11,14 +15,28 @@ public static class ShopPatch
     [HarmonyPostfix]
     public static void Postfix(NMerchantInventory __instance)
     {
+        // 使用 GetTree().CreateTimer 延迟执行，确保子节点初始化完毕
+        var timer = __instance.GetTree().CreateTimer(0.1);
+        timer.Timeout += () => AddLoanButtonDeferred(__instance);
+    }
+
+    private static void AddLoanButtonDeferred(NMerchantInventory __instance)
+    {
         try
         {
+            // 打印所有子节点，帮助找到正确容器
+            GD.Print($"[{MainFile.ModId}] === Shop node children ===");
+            PrintChildren(__instance, 0);
+
             var loanState = LoanState.Instance;
             if (loanState == null)
             {
                 GD.PrintErr($"[{MainFile.ModId}] LoanState not found");
                 return;
             }
+
+            // Check if we're in a new run and reset if needed
+            loanState.CheckAndResetForNewRun();
 
             if (loanState.LoanTakenThisRun)
             {
@@ -28,47 +46,51 @@ public static class ShopPatch
 
             int ascension = GameAPI.GetAscension();
 
-            // 尝试多种方式找到按钮容器
-            Container? buttonContainer = null;
-
-            // 方法1: 通过唯一名称查找
-            buttonContainer = __instance.GetNodeOrNull<Container>("%ButtonContainer");
-
-            // 方法2: 尝试查找任何Container子节点
-            if (buttonContainer == null)
+            // 直接把按钮加到 SlotsContainer 下
+            var slotsContainer = __instance.GetNodeOrNull<Control>("SlotsContainer");
+            if (slotsContainer == null)
             {
-                GD.Print($"[{MainFile.ModId}] ButtonContainer not found, searching for any Container");
-                foreach (var child in __instance.GetChildren())
-                {
-                    if (child is Container container)
-                    {
-                        buttonContainer = container;
-                        break;
-                    }
-                }
+                GD.PrintErr($"[{MainFile.ModId}] SlotsContainer not found");
+                return;
             }
 
-            if (buttonContainer == null)
+            // 防止按钮重复添加
+            if (slotsContainer.HasNode("LoanButton"))
             {
-                GD.PrintErr($"[{MainFile.ModId}] Cannot find suitable container for loan button");
+                GD.Print($"[{MainFile.ModId}] LoanButton already exists, skipping");
                 return;
             }
 
             var loanButton = new Button
             {
+                Name = "LoanButton",
                 Text = LocString("shop_ui", "LOANSYSTEM.shop.loan_button"),
-                CustomMinimumSize = new Vector2(200, 50)
+                CustomMinimumSize = new Vector2(200, 50),
+                Position = new Vector2(20, 500)
             };
 
             loanButton.Pressed += () => OnLoanButtonPressed(__instance, ascension);
+            slotsContainer.AddChild(loanButton);
 
-            buttonContainer.AddChild(loanButton);
-
-            GD.Print($"[{MainFile.ModId}] Loan button added to shop successfully");
+            GD.Print($"[{MainFile.ModId}] Loan button added to SlotsContainer successfully");
         }
         catch (System.Exception ex)
         {
-            GD.PrintErr($"[{MainFile.ModId}] Error in ShopPatch: {ex}");
+            GD.PrintErr($"[{MainFile.ModId}] Error in AddLoanButtonDeferred: {ex}");
+        }
+    }
+
+    private static void PrintChildren(Node node, int depth)
+    {
+        foreach (var child in node.GetChildren())
+        {
+            if (child is Node childNode)
+            {
+                string indent = new string(' ', depth * 2);
+                GD.Print($"[{MainFile.ModId}] {indent}{childNode.Name} ({childNode.GetType().Name})");
+                if (depth < 3) // 只打印3层深度
+                    PrintChildren(childNode, depth + 1);
+            }
         }
     }
 
@@ -77,7 +99,8 @@ public static class ShopPatch
         var loanState = LoanState.Instance;
         if (loanState == null || loanState.LoanTakenThisRun) return;
 
-        ShowLoanConfirmation(shop, ascension);
+        // 暂时跳过确认弹窗，直接借款
+        ExecuteLoan(shop, ascension);
     }
 
     private static void ShowLoanConfirmation(NMerchantInventory shop, int ascension)
@@ -110,19 +133,38 @@ public static class ShopPatch
         var loanState = LoanState.Instance;
         if (loanState == null) return;
 
-        loanState.TakeLoan(ascension);
-
-        var player = GameAPI.GetPlayer();
-        if (player != null)
+        // 直接从商店的 Inventory 拿 Players
+        var inventory = shop.Inventory;
+        if (inventory == null)
         {
-            RelicHelper.AddRelic(player, LoanState.LoanRelicId);
+            GD.PrintErr($"[{MainFile.ModId}] Inventory is null");
+            return;
         }
+
+        var players = Traverse.Create(inventory).Property("Players").GetValue<IEnumerable<Player>>()
+                      ?? Traverse.Create(inventory).Field("_players").GetValue<IEnumerable<Player>>();
+
+        var player = players?.FirstOrDefault();
+        if (player == null)
+        {
+            GD.PrintErr($"[{MainFile.ModId}] Player is null from Inventory");
+            return;
+        }
+
+        GD.Print($"[{MainFile.ModId}] Got player, gold before: {player.Gold}");
+        loanState.TakeLoan(ascension, player);
+        GD.Print($"[{MainFile.ModId}] Gold after loan: {player.Gold}");
 
         shop.QueueRedraw();
     }
 
-    private static string LocString(string category, string key)
+    private static string LocString(string category, string key) => key switch
     {
-        return new LocString(category, key).GetFormattedText();
-    }
+        "LOANSYSTEM.shop.loan_button" => "向商人借款",
+        "LOANSYSTEM.shop.confirm_title" => "借款确认",
+        "LOANSYSTEM.shop.confirm_text" => "立即获得 {0} 金币，需偿还 {1} 金币（利息 {2} 金币）。\n每次获得金币时50%自动还款。\n持有期间每场战斗第三回合获得1点敏捷。\n第三层Boss前未还清则获得随机诅咒。",
+        "LOANSYSTEM.shop.confirm_accept" => "接受借款",
+        "LOANSYSTEM.shop.confirm_cancel" => "取消",
+        _ => key
+    };
 }
