@@ -1,0 +1,12 @@
+{
+  "LOANSYSTEM.shop.loan_button": "向商人借款",
+  "LOANSYSTEM.shop.confirm_title": "借款确认",
+  "LOANSYSTEM.shop.confirm_text": "你将立即获得 {0} 金币，并获得特殊遗物"欠条"。\n\n总债务：{1} 金币（利息：{2} 金币）\n\n持有欠条期间：\n- 每次获得金币时，50% 将自动用于偿还债务\n- 每场战斗的第三回合开始时获得 1 点敏捷\n- 若在第三层 Boss 战前仍未还清，则获得 1 张随机诅咒\n- 债务还清时，移除欠条并获得 1 瓶普通药水\n\n本局只能借款一次。",
+  "LOANSYSTEM.shop.confirm_accept": "接受借款",
+  "LOANSYSTEM.shop.confirm_cancel": "取消",
+  "LOANSYSTEM.default.title": "债务清算",
+  "LOANSYSTEM.default.message": "商人已经到了清账的时候。你拖欠的债务，将在此刻收取代价。",
+  "LOANSYSTEM.default.ok": "接受",
+  "LOANSYSTEM.iou_relic.name": "欠条",
+  "LOANSYSTEM.iou_relic.description": "每次获得金币时，50% 改为偿还债务。若债务未还清，则每场战斗的第三回合开始时获得 1 点敏捷。债务还清时，移除此遗物并获得 1 瓶普通药水。若在第三层 Boss 战前的休息点进入时仍未还清，则获得 1 张随机诅咒。\n\n剩余债务：{0} 金币"
+}

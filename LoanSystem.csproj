@@ -1,0 +1,54 @@
+<Project Sdk="Godot.NET.Sdk/4.5.1">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <LangVersion>12</LangVersion>
+    <Nullable>enable</Nullable>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <RootNamespace>LoanSystem</RootNamespace>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(OS)' == 'Windows_NT' ">
+    <Sts2DataDir>$([MSBuild]::GetRegistryValueFromView('HKEY_CURRENT_USER\Software\Valve\Steam', 'SteamPath', null, RegistryView.Registry32))\steamapps\common\Slay the Spire 2\Slay the Spire 2_Data\Managed</Sts2DataDir>
+    <ModsPath>$([MSBuild]::GetRegistryValueFromView('HKEY_CURRENT_USER\Software\Valve\Steam', 'SteamPath', null, RegistryView.Registry32))\steamapps\common\Slay the Spire 2\Slay the Spire 2_Data\StreamingAssets\mods\LoanSystem</ModsPath>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(OS)' != 'Windows_NT' And '$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::OSX)))' == 'true' ">
+    <Sts2DataDir>$(HOME)/Library/Application Support/Steam/steamapps/common/Slay the Spire 2/Slay the Spire 2.app/Contents/Resources/Data/Managed</Sts2DataDir>
+    <ModsPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Slay the Spire 2/Slay the Spire 2.app/Contents/Resources/Data/StreamingAssets/mods/LoanSystem</ModsPath>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(OS)' != 'Windows_NT' And '$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Linux)))' == 'true' ">
+    <Sts2DataDir>$(HOME)/.steam/steam/steamapps/common/Slay the Spire 2/Slay the Spire 2_Data/Managed</Sts2DataDir>
+    <ModsPath>$(HOME)/.steam/steam/steamapps/common/Slay the Spire 2/Slay the Spire 2_Data/StreamingAssets/mods/LoanSystem</ModsPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="0Harmony">
+      <HintPath>lib\0Harmony.dll</HintPath>
+    </Reference>
+    <Reference Include="sts2">
+      <HintPath>lib\sts2.dll</HintPath>
+      <Publicize>PublicizeSts</Publicize>
+    </Reference>
+    <Reference Include="BaseLib">
+      <HintPath>lib\BaseLib.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.2">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <Target Name="CopyToModsFolderOnBuild" AfterTargets="Build">
+    <MakeDir Directories="$(ModsPath)" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ModsPath)" />
+    <Copy SourceFiles="LoanSystem.json" DestinationFolder="$(ModsPath)" />
+  </Target>
+
+  <Target Name="GodotPublish" AfterTargets="Publish">
+    <Exec Command="godot --headless --export-pack &quot;Windows Desktop&quot; &quot;$(ModsPath)\LoanSystem.pck&quot;" />
+  </Target>
+</Project>

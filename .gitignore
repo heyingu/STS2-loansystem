@@ -1,0 +1,8 @@
+.godot/
+bin/
+obj/
+*.user
+*.suo
+.vs/
+lib/
+TESTING.md

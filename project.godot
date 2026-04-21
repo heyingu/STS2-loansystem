@@ -1,0 +1,10 @@
+; Engine configuration file.
+
+[application]
+
+config/name="LoanSystem"
+config/features=PackedStringArray("4.5")
+
+[dotnet]
+
+project/assembly_name="LoanSystem"

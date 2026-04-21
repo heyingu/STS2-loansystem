@@ -1,0 +1,12 @@
+{
+  "LOANSYSTEM.shop.loan_button": "Borrow from Merchant",
+  "LOANSYSTEM.shop.confirm_title": "Loan Confirmation",
+  "LOANSYSTEM.shop.confirm_text": "You will immediately receive {0} gold and obtain the special relic 'IOU'.\n\nTotal debt: {1} gold (interest: {2} gold)\n\nWhile holding the IOU:\n- 50% of all gold gained goes to debt repayment\n- Gain 1 Dexterity at the start of turn 3 in each combat\n- If debt remains unpaid before Act 3 boss, receive 1 random curse\n- When debt is cleared, remove IOU and gain 1 common potion\n\nYou can only borrow once per run.",
+  "LOANSYSTEM.shop.confirm_accept": "Accept Loan",
+  "LOANSYSTEM.shop.confirm_cancel": "Cancel",
+  "LOANSYSTEM.default.title": "Debt Collection",
+  "LOANSYSTEM.default.message": "The merchant has come to settle accounts. Your unpaid debt will now exact its price.",
+  "LOANSYSTEM.default.ok": "Accept",
+  "LOANSYSTEM.iou_relic.name": "IOU",
+  "LOANSYSTEM.iou_relic.description": "50% of all gold gained goes to debt repayment. While debt remains, gain 1 Dexterity at the start of turn 3 in each combat. When debt is cleared, remove this relic and gain 1 common potion. If debt remains unpaid before Act 3 boss rest site, receive 1 random curse.\n\nRemaining debt: {0} gold"
+}
